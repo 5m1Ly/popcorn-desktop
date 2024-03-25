@@ -26,24 +26,16 @@
       streaming: '.external-play',
       controls: '.player-controls',
       cancel_button: '#cancel-button',
-      cancel_button_vpn: '#cancel-button-vpn',
       playingbarBox: '.playing-progressbar',
       playingbar: '#playingbar-contents',
       minimizeIcon: '.minimize-icon',
       maximizeIcon: '.maximize-icon',
-      vpn: '#vpn-contents',
-      userIp: '#userIp',
-      userCity: '#userCity',
-      userCountry: '#userCountry',
-      userZIP: '#userZIP',
-      userISP: '#userISP',
-      map: '#map'
+      magnetIcon: '.magnet-icon'
     },
 
     events: {
       'click #cancel-button': 'cancelStreaming',
       'click #cancel-button-regular': 'cancelStreaming',
-      'click #cancel-button-vpn': 'cancelStreamingVPN',
       'dblclick .text_filename': 'openItem',
       'click .pause': 'pauseStreaming',
       'click .stop': 'stopStreaming',
@@ -86,30 +78,6 @@
       });
       win.info('Loading torrent');
       this.listenTo(this.model, 'change:state', this.onStateUpdate);
-    },
-
-    showVPNLoader: function() {
-      request(
-        {
-          url: 'https://myip.ht/status',
-          json: true
-        },
-        (err, _, data) => {
-          if (err || !data || data.error) {
-            console.log('can\'t extract user data, using default loader');
-          } else {
-            this.ui.cancel_button.css('visibility', 'hidden');
-            this.ui.vpn.css('display', 'block');
-            this.ui.state.css('top', '200px');
-            this.ui.userIp.text(data.ip);
-            this.ui.userCity.text(data.advanced.city);
-            this.ui.userCountry.text(data.advanced.countryName);
-            this.ui.userZIP.text(data.advanced.postalCode);
-            this.ui.userISP.text(data.isp);
-            this.ui.map.parent().html('<i class="fas fa-lock" style="opacity:0.2;font-size:600%"></i>');
-          }
-        }
-      );
     },
 
     initKeyboardShortcuts: function() {
@@ -176,6 +144,9 @@
       win.info('Loading torrent:', state);
       this.ui.stateTextDownload.text(i18n.__(state));
       if (streamInfo) {
+        if (streamInfo.get('torrentModel').get('localFile')) {
+          streamInfo.set({device: streamInfo.get('torrentModel').get('torrentModel').get('device'), src: streamInfo.get('torrentModel').get('src')});
+        }
         if (streamInfo.get('downloaded')) {
           this.ui.stateTextDownloadedFormatted.text(Common.fileSize(streamInfo.get('downloaded')) + ' / ');
         }
@@ -201,7 +172,6 @@
         this.ui.stateTextDownload.text(i18n.__('Downloading'));
         this.ui.progressbar.parent().css('visibility', 'hidden');
         if (streamInfo && streamInfo.get('device')) {
-          this.ui.vpn.css('display', 'none');
           this.ui.playingbar.css('width', '0%');
           this.ui.cancel_button.css('visibility', 'visible');
           if (Settings.activateLoCtrl === true) {
@@ -222,6 +192,11 @@
         this.ui.seedStatus.css('visibility', 'visible');
         this.ui.progressbar.parent().css('visibility', 'visible');
         this.ui.stateTextDownloadedFormatted.show();
+        if (streamInfo.get('torrentModel').get('localFile')) {
+          this.ui.magnetIcon.css('visibility', 'hidden');
+          this.ui.progressbar.parent().css('visibility', 'hidden');
+          streamInfo.set({downloaded: streamInfo.get('size'), downloadedPercent: 100});
+        }
         if (streamInfo.get('src') && Settings.ipAddress) {
           this.ui.stateTextStreamUrl.text(streamInfo.get('src').replace('127.0.0.1', Settings.ipAddress));
         }
@@ -252,7 +227,7 @@
             this.ui.downloadSpeed.hide();
             this.ui.stateTextRemaining.hide();
             $('#rbreak1,#rbreak2,#rbreak3,#rdownl,#ractpr,#maxdl,#maxdllb').hide();
-            $('.cancel-button').css('background-color', '#27ae60');
+            this.ui.cancel_button.css({'background-color': '#27ae60', 'color': '#fff'});
             this.ui.maximizeIcon.addClass('done');
             this.ddone = true;
           }
@@ -267,7 +242,7 @@
       if (status.media !== undefined && status.media.duration !== undefined) {
         var playedPercent = (status.currentTime / status.media.duration) * 100;
         this.ui.playingbar.css('width', playedPercent.toFixed(1) + '%');
-        win.debug(
+        win.info(
           'ExternalStream: %s: %ss / %ss (%s%)',
           status.playerState,
           status.currentTime.toFixed(1),
@@ -285,7 +260,6 @@
         // If media encountered error, most likely unsupported codecs with chromecast
         if (status.idleReason === 'ERROR') {
           win.error('Device can\'t play the video');
-          win.debug('Status: ', status);
           App.vent.trigger('notification:show', new App.Model.Notification({
             title: i18n.__('Device can\'t play the video'),
             body: i18n.__('Your device might not support the video format/codecs.<br/>Try other resolution quality or casting with VLC'),
@@ -310,11 +284,6 @@
       App.vent.trigger('stream:stop');
       App.vent.trigger('player:close');
       App.vent.trigger('torrentcache:stop');
-    },
-
-    cancelStreamingVPN: function() {
-      this.cancelStreaming();
-      App.vent.trigger('vpn:open');
     },
 
     showpcontrols: function (e) {
@@ -378,18 +347,15 @@
     },
 
     forwardStreaming: function() {
-      win.debug('Forward triggered');
       App.vent.trigger('device:forward');
     },
 
     backwardStreaming: function() {
-      win.debug('Backward triggered');
       App.vent.trigger('device:backward');
     },
 
     seekStreaming: function(e) {
       var percentClicked = (e.offsetX / e.currentTarget.clientWidth) * 100;
-      win.debug('Seek (%s%) triggered', percentClicked.toFixed(2));
       App.vent.trigger('device:seekPercentage', percentClicked);
     },
 
@@ -437,7 +403,7 @@
     onBeforeDestroy: function() {
       $('.filter-bar').show();
       $('#header').removeClass('header-shadow');
-      $('.button, #watch-now, .show-details .sdo-watch, .sdow-watchnow, .playerchoice, .file-item, .file-item a, .result-item, .result-item > *:not(.item-icon), .trash-torrent, .collection-paste, .collection-import, .seedbox .item-play, #torrent-list .item-row, #torrent-show-list .item-row, #torrent-list .item-play, #torrent-show-list .item-play').removeClass('disabled').removeProp('disabled');
+      $('.button, #watch-now, .show-details .sdo-watch, .sdow-watchnow, .playerchoice, .file-item, .file-item a, .result-item, .result-item > *:not(.item-icon), .trash-torrent, .collection-paste, .collection-import, .seedbox .item-play, .seedbox .exit-when-done, #torrent-list .item-row, #torrent-show-list .item-row, #torrent-list .item-play, #torrent-show-list .item-play').removeClass('disabled').removeProp('disabled');
       Mousetrap.bind(['esc', 'backspace'], function(e) {
         App.vent.trigger('show:closeDetail');
         App.vent.trigger('movie:closeDetail');

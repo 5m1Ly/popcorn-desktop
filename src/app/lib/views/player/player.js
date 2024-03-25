@@ -259,7 +259,6 @@
                         }
                         if ((this.video.duration() - this.video.currentTime()) < 60) {
                             var playingNext = $('.playing_next');
-                            win.info('Showing Auto Play message');
                             this.autoplayisshown = true;
                             playingNext.show();
                             playingNext.appendTo('div#video_player');
@@ -272,7 +271,6 @@
                     $('.playing_next #nextCountdown').text(count);
                 } else {
                     if (this.autoplayisshown) {
-                        win.info('Hiding Auto Play message');
                         $('.playing_next').hide();
                         $('.playing_next #nextCountdown').text('');
                         this.autoplayisshown = false;
@@ -325,7 +323,7 @@
         copytoclip: (e) => Common.openOrClipboardLink(e, e.target.textContent.replace(' - Trailer', ''), i18n.__($(e.target).data('copy')), true),
 
         onPlayerReady: function () {
-            win.debug('Player - data loaded in %sms', (Date.now() - this.playerWasReady));
+            win.info('Player - data loaded in %sms', (Date.now() - this.playerWasReady));
 
             // set volume
             this.player.volume(Settings.playerVolume);
@@ -333,7 +331,7 @@
             // resume position
             if (Settings.lastWatchedTitle === this.model.get('title') && Settings.lastWatchedTime > 0) {
                 var position = Settings.lastWatchedTime;
-                win.debug('Resuming position to', position.toFixed(), 'secs');
+                win.info('Resuming position to', position.toFixed(), 'secs');
                 this.player.currentTime(position);
             } else if (Settings.traktPlayback) {
                 var type = this.isMovie();
@@ -342,7 +340,7 @@
                     var total = this.video.duration();
                     var position = (position_percent / 100) * total | 0;
                     if (position > 0) {
-                        win.debug('Resuming position to', position.toFixed(), 'secs (reported by Trakt)');
+                        win.info('Resuming position to', position.toFixed(), 'secs (reported by Trakt)');
                         this.player.currentTime(position);
                     }
                 }.bind(this));
@@ -388,12 +386,12 @@
                 this.wasSeek = true;
             } else {
                 this.wasSeek = false;
-                this.ui.play.hide().dequeue().css('transform', 'scale(1)');
-                this.ui.pause.appendTo('div#video_player');
-                this.ui.pause.show().delay(50).queue(function () {
+                try { this.ui.play.hide().dequeue().css('transform', 'scale(1)'); } catch (error) {}
+                try { this.ui.pause.appendTo('div#video_player'); } catch (error) {}
+                try { this.ui.pause.show().delay(50).queue(function () {
                     this.ui.pause.css('transform', 'scale(1.8)').fadeOut(400).dequeue();
-                }.bind(this));
-                this.ui.maxPlayCtrlIcon.removeClass('fa-pause').addClass('fa-play');
+                }.bind(this)); } catch (error) {}
+                try { this.ui.maxPlayCtrlIcon.removeClass('fa-pause').addClass('fa-play'); } catch (error) {}
                 App.vent.trigger('player:pause');
                 this.sendToTrakt('pause');
             }
@@ -456,6 +454,10 @@
                 this.next_episode_model = false;
 
                 this.processNext();
+            }
+
+            if (this.model.get('localFile')) {
+                this.model.set({downloaded: this.model.get('size'), downloadedPercent: 100});
             }
 
             this.$('.tooltipped').tooltip({
@@ -540,10 +542,12 @@
 
             // Local subtitle hack
             App.vent.on('customSubtitles:added', function (subpath) {
+                var currentTime = 0;
+                try { currentTime = that.video.currentTime(); } catch (error) {};
                 that.customSubtitles = {
                     subPath: subpath,
                     added_at: Date.now(),
-                    timestamp: that.video.currentTime(),
+                    timestamp: currentTime,
                     modified: false
                 };
                 $('#video_player li:contains("' + i18n.__('Disabled') + '")').on('click', function () {
@@ -641,7 +645,6 @@
             }
         },
         playNextNot: function () {
-            win.info('Hiding Auto Play message');
             $('.playing_next').hide();
             $('.playing_next #nextCountdown').text('');
             !this.autoplayisshown;
@@ -712,7 +715,7 @@
             this.sendToTrakt('stop');
 
             // remove wrong metadata
-            var title = path.basename(this.model.get('src'));
+            var title = this.model.get('filename') || path.basename(this.model.get('src'));
             this.model.set('imdb_id', false);
             this.model.set('cover', false);
             this.model.set('title', title);
@@ -735,7 +738,11 @@
             var item;
             for (var i = $('.vjs-subtitles-button .vjs-menu-item').length - 1; i > 0; i--) {
                 item = $('.vjs-subtitles-button .vjs-menu-item')[i];
-                if (item.innerText !== i18n.__('Subtitles') && item.innerText !== i18n.__('Custom...') && item.innerText !== i18n.__('Disabled')) {
+                if (item.innerText !== i18n.__('Subtitles') && item.innerText !== i18n.__('Custom...') && item.innerText !== i18n.__('Disabled') && item.innerText !== i18n.__('Local')) {
+                    if (item.classList.contains('vjs-selected')) {
+                        this.prevSub = $('.vjs-subtitles-button .vjs-menu-item')[0];
+                        this.prevSub.click();
+                    }
                     item.remove();
                 }
             }
@@ -1177,13 +1184,13 @@
             if (curVideo[0]) {
                 var multPer = ((curVideo[0].videoWidth / curVideo[0].videoHeight) / (screen.width / screen.height))*100;
                 if (curVideo.width() > $('#video_player').width() || curVideo.height() > $('#video_player').height()) {
-                    curVideo.css({'width': '100%', 'height': '100%', 'left': '0', 'top': '0'});
+                    curVideo.removeAttr('style');
                     this.displayOverlayMsg(i18n.__('Original'));
                 } else if (multPer > 100) {
-                    curVideo.css({'width': multPer + '%', 'left': 50-multPer/2 + '%'});
+                    curVideo.css({'width': multPer + '%', 'left': 50-multPer/2 + '%', 'border': 'none'});
                     this.displayOverlayMsg(i18n.__('Fit screen'));
                 } else if (multPer < 100) {
-                    curVideo.css({'height': 10000/multPer + '%', 'top': 50-5000/multPer + '%'});
+                    curVideo.css({'height': 10000/multPer + '%', 'top': 50-5000/multPer + '%', 'border': 'none'});
                     this.displayOverlayMsg(i18n.__('Fit screen'));
                 } else {
                     this.displayOverlayMsg(i18n.__('Video already fits screen'));
@@ -1268,7 +1275,7 @@
             if (this.inFullscreen && !win.isFullscreen) {
                 $('.btn-os.fullscreen').removeClass('active');
             }
-            $('.button, #watch-now, .show-details .sdo-watch, .sdow-watchnow, .playerchoice, .file-item, .file-item a, .result-item, .result-item > *:not(.item-icon), .trash-torrent, .collection-paste, .collection-import, .seedbox .item-play, #torrent-list .item-row, #torrent-show-list .item-row, #torrent-list .item-play, #torrent-show-list .item-play').removeClass('disabled').removeProp('disabled');
+            $('.button, #watch-now, .show-details .sdo-watch, .sdow-watchnow, .playerchoice, .file-item, .file-item a, .result-item, .result-item > *:not(.item-icon), .trash-torrent, .collection-paste, .collection-import, .seedbox .item-play, .seedbox .exit-when-done, #torrent-list .item-row, #torrent-show-list .item-row, #torrent-list .item-play, #torrent-show-list .item-play').removeClass('disabled').removeProp('disabled');
             this.unbindKeyboardShortcuts();
             Mousetrap.bind('ctrl+v', function (e) {
             });

@@ -26,11 +26,11 @@
       'click .ratings .dropdown-menu a': 'changeRating',
       'click #filterbar-settings': 'settings',
       'click #filterbar-tempf': 'tempf',
-      'click #filterbar-vpn': 'vpn',
       'click .movieTabShow': 'movieTabShow',
       'click .tvshowTabShow': 'tvshowTabShow',
       'click .animeTabShow': 'animeTabShow',
       'click #filterbar-favorites': 'showFavorites',
+      'click #filterbar-watched': 'showWatched',
       'click #filterbar-watchlist': 'showWatchlist',
       'click #filterbar-torrent-collection': 'showTorrentCollection',
       'click .triggerUpdate': 'updateDB',
@@ -41,34 +41,6 @@
       App.vent.on('filter-bar:render', () => {
         this.render();
         this.setActive(App.currentview);
-      });
-
-      if (VPNht.isInstalled()) {
-        VPNht.isConnected().then(isConnected => {
-          if (isConnected) {
-            $('#filterbar-vpn')
-              .addClass('vpn-connected')
-              .addClass('fa-lock')
-              .removeClass('vpn-disconnected')
-              .removeClass('fa-unlock');
-          }
-        });
-      }
-
-      App.vent.on('vpn:connected', function() {
-        $('#filterbar-vpn')
-          .addClass('vpn-connected')
-          .addClass('fa-lock')
-          .removeClass('vpn-disconnected')
-          .removeClass('fa-unlock');
-      });
-
-      App.vent.on('vpn:disconnected', function() {
-        $('#filterbar-vpn')
-          .addClass('vpn-disconnected')
-          .addClass('fa-unlock')
-          .removeClass('vpn-connected')
-          .removeClass('fa-lock');
       });
     },
 
@@ -111,6 +83,10 @@
         case 'Favorites':
         case 'favorites':
           $('#filterbar-favorites').addClass('active');
+          break;
+        case 'Watched':
+        case 'watched':
+          $('#filterbar-watched').addClass('active');
           break;
         case 'Watchlist':
         case 'watchlist':
@@ -196,6 +172,10 @@
             break;
           case 'Favorites':
             App.currentview = 'Favorites';
+            App.previousview = 'movies';
+            break;
+          case 'Watched':
+            App.currentview = 'Watched';
             App.previousview = 'movies';
             break;
           case 'Watchlist':
@@ -374,43 +354,44 @@
       App.settings.os === 'windows' ? nw.Shell.openExternal(Settings.tmpLocation) : nw.Shell.openItem(Settings.tmpLocation);
     },
 
-    vpn: function(e) {
-      App.vent.trigger('vpn:open');
-    },
-
     showTorrentCollection: function(e) {
       e.preventDefault();
       if (App.currentview !== 'Torrent-collection') {
-        if (App.currentview === 'Seedbox') {
-          App.currentview = App.previousview;
-          App.vent.trigger('seedbox:close');
+        if (App.currentview !== 'Seedbox') {
+          App.previousview = App.currentview;
         }
-        App.previousview = App.currentview;
         App.currentview = 'Torrent-collection';
         App.vent.trigger('about:close');
+        App.vent.trigger('seedbox:close');
         App.vent.trigger('torrentCollection:show');
         this.setActive('Torrent-collection');
       } else {
-        App.currentview = App.previousview;
-        App.vent.trigger('torrentCollection:close');
+        if (!App.ViewStack.includes('seedbox') && !$('#filterbar-seedbox').hasClass('active')) {
+          App.currentview = App.previousview;
+          App.vent.trigger('torrentCollection:close');
+        }
+        App.vent.trigger('seedbox:close');
         this.setActive(App.currentview);
       }
     },
 
     showSeedbox: function(e) {
       e.preventDefault();
-      if (App.currentview !== 'Seedbox') {
-        if (App.currentview === 'Torrent-collection') {
-          App.currentview = App.previousview;
-          App.vent.trigger('torrentCollection:close');
+      if (App.currentview !== 'Seedbox' && !App.ViewStack.includes('seedbox')) {
+        if (App.currentview !== 'Torrent-collection') {
+          App.previousview = App.currentview;
+          App.currentview = 'Seedbox';
+        } else if (!App.ViewStack.includes('torrent-collection') && !$('#filterbar-torrent-collection').hasClass('active')) {
+          App.vent.trigger('seedbox:close');
+          return this.setActive(App.currentview);
         }
-        App.previousview = App.currentview;
-        App.currentview = 'Seedbox';
         App.vent.trigger('about:close');
         App.vent.trigger('seedbox:show');
         this.setActive('Seedbox');
       } else {
-        App.currentview = App.previousview;
+        if (App.currentview !== 'Torrent-collection') {
+          App.currentview = App.previousview;
+        }
         App.vent.trigger('seedbox:close');
         this.setActive(App.currentview);
       }
@@ -455,6 +436,17 @@
       App.vent.trigger('seedbox:close');
       App.vent.trigger('favorites:list', []);
       this.setActive('Favorites');
+    },
+
+    showWatched: function(e) {
+      e.preventDefault();
+      App.previousview = App.currentview;
+      App.currentview = 'Watched';
+      App.vent.trigger('about:close');
+      App.vent.trigger('torrentCollection:close');
+      App.vent.trigger('seedbox:close');
+      App.vent.trigger('favorites:list', []);
+      this.setActive('Watched');
     },
 
     showWatchlist: function(e) {

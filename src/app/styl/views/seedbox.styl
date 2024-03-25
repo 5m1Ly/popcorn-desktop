@@ -6,6 +6,20 @@
     -webkit-user-select none
     opacity 1
 
+    .spinner
+        position: fixed
+        width: 100%
+        height: 100%
+        background: rgba(0, 0, 0, 0.5) center center no-repeat
+        pointer-events: all
+        z-index: 10
+        display: none
+        top: 0
+
+        .loading-container
+            margin: 50vh auto 0px
+            opacity: .8
+
     .margintop
         height 100px
 
@@ -32,7 +46,7 @@
               scrollable()
 
               li
-                  padding: 0px 15px
+                  padding: 0px 17px 0px 0px
                   margin: 1px 0px 1px 1px
                   float: left
                   width: calc(100% - 7px)
@@ -58,6 +72,14 @@
                   .watched:not(.fa-download):not(.fa-upload)
                       &:hover
                           color: $ShowWatchedIcon_true
+
+                  .pause-torrent
+                      width 50px
+                      padding 10px 20px
+
+                  .resume-torrent
+                      width 50px
+                      padding 10px 19px
 
               li:nth-child(odd)
                   background-color $ShowBgColor2
@@ -91,12 +113,12 @@
 
                   span
                       float: left
-                      margin: 0px 17px 0px 5px
+                      margin: 0px
 
                   div
                       white-space: nowrap
                       border-left: 1px solid $ShowBgColor1
-                      padding-left: 30px
+                      padding-left: 25px
                       text-align: left
                       overflow: hidden
                       text-overflow: ellipsis
@@ -219,6 +241,7 @@
 
                       &>div
                           padding: 5px 2px
+                          border-radius: 50%
                           cursor: pointer
                           position: relative
 
@@ -239,7 +262,7 @@
                       .magnet-icon
                           font-size: 13px
                           color: #DDD
-                          margin-right: 2px
+                          margin-right: 1px
 
                           &:hover
                               color: #FFF
@@ -252,13 +275,12 @@
                       color: $ShowText2
 
                       .seedbox-infos-date
-                          margin-left: 5px
                           overflow: hidden
                           white-space: nowrap
                           text-overflow: ellipsis
 
                       i
-                          margin-right: 5px
+                          margin-right: 8px
                           font-family: $MainFont, "Font Awesome 6 Free"
 
                   .seedbox-infos-synopsis
@@ -268,7 +290,8 @@
                       text-align: justify
                       margin-top: 14px
                       margin-left: -18px
-                      padding: 4px 15px 5px 0
+                      padding: 4px 6px 5px 0
+                      margin-right: 9px
                       height: calc(100vh - 338px)
                       scrollable()
 
@@ -323,19 +346,23 @@
                                   color rgba($FileSelectorText, 0.4)
                                   transition all 0.3s
                                   cursor pointer
-                                  left calc(100% + 7px)
-                                  top -18px
+                                  left calc(100% - 23px)
+                                  top -25px
+                                  padding 10px
+                                  border-radius 50%
 
                                   &:hover
                                       color $CloseButtonHover
 
                               .item-play
-                                  left -8px
+                                  left -18px
                                   position relative
                                   color rgba($FileSelectorText, 0.4)
                                   transition all 0.3s
                                   cursor pointer
-                                  top -18px
+                                  top -25px
+                                  padding 10px
+                                  border-radius 50%
 
                                   &:hover
                                       color $CloseButtonHover
@@ -480,6 +507,67 @@
                 background-image: linear-gradient(to bottom, #27ae60 100%, #27ae60 100%);
             }
         }
+
+        .exit-when-done
+            width: 44px;
+            margin-top: 21px;
+            margin-right: -18px;
+            float: right;
+            padding: 0.36rem 1rem;
+            border-radius: 3px;
+            background: $ShowBgColor2;
+            color: $ShowText2;
+            font-size: 0.65rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            overflow: hidden;
+            text-overflow: clip;
+            white-space: nowrap;
+            cursor: pointer;
+            transition: all 0.7s ease, color 0.1s, background-color 0.3s;
+            transition-delay: 0.6s, 0s, 0s;
+
+            &:hover
+                width: 35vw;
+                transition-delay: 0.3s, 0s, 0s;
+                border-radius: 0;
+                padding: 0.86rem 1.62rem 0.86rem 1rem;
+                margin-top: 13px;
+                margin-right: -28px;
+
+                & > span
+                    opacity: 1;
+                    transition-delay: 0.3s;
+
+                & > i
+                    color: $CloseButtonHover;
+
+            &.active
+                color: #fff;
+                background-color: #27ae60;
+
+                &:hover
+                    & > i
+                        color: #fff;
+
+            &.disabled
+                display: none;
+
+            & i
+                font-family: "Font Awesome 6 Free";
+                font-size: 12px;
+                float: right;
+                pointer-events: none;
+                transition: color 0.3s;
+                margin-top: 1px;
+
+            & span
+                opacity: 0;
+                transition: opacity 0.5s ease-in-out;
+                transition-delay: 0.6s;
+                pointer-events: none;
+                margin-left: 12px;
+                line-height: calc(100% + 3px);
 
         .progress-info {
             margin-bottom: .5rem;

@@ -20,6 +20,7 @@
           covers: '.cover-imgs',
           defaultCover: '.cover',
           cover: '.cover',
+          overlay: '.cover-overlay',
           bookmarkIcon: '.actions-favorites',
           watchedIcon: '.actions-watched'
         },
@@ -139,22 +140,27 @@
 
             if (this.model.get('bookmarked') || itemtype.match('bookmarked')) {
                 this.ui.bookmarkIcon.addClass('selected');
+                if (Settings.alwaysShowBookmarks) {
+                    this.ui.overlay.addClass('selected');
+                }
             }
 
             if (this.model.get('watched') && !itemtype.match('show')) {
                 this.ui.watchedIcon.addClass('selected');
 
-                switch (Settings.watchedCovers) {
-                    case 'fade':
-                        this.$el.addClass('watched');
-                        break;
-                    case 'hide':
-                        if ($('.search input').val() || itemtype.match('bookmarked')) {
+                if (App.currentview !== 'Watched') {
+                    switch (Settings.watchedCovers) {
+                        case 'fade':
                             this.$el.addClass('watched');
-                        } else {
-                            this.$el.remove();
-                        }
-                        break;
+                            break;
+                        case 'hide':
+                            if ($('.search input').val() || itemtype.match('bookmarked')) {
+                                this.$el.addClass('watched');
+                            } else {
+                                this.$el.remove();
+                            }
+                            break;
+                    }
                 }
             }
 
@@ -207,7 +213,17 @@
             }
 
             Common.loadImage(poster).then((img) => {
-                if (this.ui.cover.css) {
+                if (!img && this.model.get('poster_medium') && poster !== this.model.get('poster_medium')) {
+                    poster = this.model.get('poster_medium');
+                    this.model.set('poster', poster);
+                    this.model.set('image', poster);
+                    this.model.set('cover', poster);
+                    Common.loadImage(poster).then((img) => {
+                        if (this.ui.cover.css) {
+                            this.ui.cover.css('background-image', 'url(' + (img || noimg) + ')').addClass('fadein');
+                        }
+                    });
+                } else if (this.ui.cover.css) {
                     this.ui.cover.css('background-image', 'url(' + (img || noimg) + ')').addClass('fadein');
                 }
             });
@@ -278,7 +294,7 @@
                 App.vent.trigger(itemtype + ':showDetail', this.model.set(data));
             }.bind(this))
                 .catch(function (err) {
-                    console.error('error showing detail:', err);
+                    win.error('error showing detail:', err);
                     $('.spinner').hide();
                     $('.notification_alert').text(i18n.__('Error loading data, try again later...')).fadeIn('fast').delay(2500).fadeOut('fast');
                 });
@@ -346,7 +362,7 @@
             }).then(function () {
                 return Database.addBookmark(imdb, itemtype);
             }).then(function () {
-                console.log('Bookmark added (' + imdb + ')');
+                win.info('Bookmark added (' + imdb + ')');
             }.bind(this));
         },
 
@@ -362,7 +378,7 @@
             }());
 
             return Database.deleteBookmark(imdb).then(function () {
-                console.log('Bookmark deleted (' + imdb + ')');
+                win.info('Bookmark deleted (' + imdb + ')');
                 return Database[dbCall](imdb);
             });
         },
@@ -388,6 +404,7 @@
 
                     this.model.set('bookmarked', false);
                     this.ui.bookmarkIcon.removeClass('selected');
+                    this.ui.overlay.removeClass('selected');
                     this.setCoverStates();
                     this.setTooltips();
 
@@ -413,7 +430,6 @@
                         App.vent.trigger('notification:show', new App.Model.Notification({
                             title: '',
                             body: '<font size="3">' + this.model.get('title') + ' (' + this.model.get('year') + ')' + '</font><br>' + i18n.__('was removed from bookmarks'),
-                            showClose: true,
                             autoclose: true,
                             type: 'info',
                             buttons: [{ title: i18n.__('Undo'), action: delCache }]
@@ -433,7 +449,7 @@
                         this.setTooltips();
                     }
                 }.bind(this)).catch(function (err) {
-                    console.error('item.addBookmarked failed:', err);
+                    win.error('item.addBookmarked failed:', err);
                     $('.notification_alert').text(i18n.__('Error loading data, try again later...')).fadeIn('fast').delay(2500).fadeOut('fast');
                     this.ui.bookmarkIcon.removeClass('selected');
                 }.bind(this));

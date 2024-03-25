@@ -17,6 +17,7 @@
       'click .favourites-toggle': 'toggleFavourite',
       'click .playerchoicemenu li a': 'selectPlayer',
       'click .playerchoicehelp': 'showPlayerList',
+      'click .playerchoicerefresh': 'refreshPlayerList',
       'click .watched-toggle': 'toggleWatched',
       'mousedown #subs-dropdown': 'hideTooltipsSubs',
       'click .connect-opensubtitles': 'connectOpensubtitles',
@@ -72,6 +73,8 @@
       this.model.on('change:subtitle', this.loadSubDropdown.bind(this));
       this.model.set('showTorrents', false);
       this.ui.showTorrents.show();
+
+      $('.playerchoicerefresh, .playerchoicehelp').tooltip({html: true, delay: {'show': 800,'hide': 100}});
 
       if ($('.loading .maximize-icon').is(':visible') || $('.player .maximize-icon').is(':visible')) {
         $('.button:not(#download-torrent)').addClass('disabled');
@@ -200,7 +203,7 @@
     hideTooltipsSubs: function (e) {
       this.hideTooltips();
       if (e.button === 2) {
-        nw.Shell.openExternal('https://www.opensubtitles.org/search/' + (this.model.get('imdb_id') ? this.model.get('imdb_id').replace('tt', 'imdbid-') : ''));
+        nw.Shell.openExternal('https://www.opensubtitles.org/search/sublanguageid-all/' + (this.model.get('imdb_id') ? this.model.get('imdb_id').replace('tt', 'imdbid-') : ''));
       }
     },
 
@@ -341,6 +344,20 @@
         body: i18n.__('Popcorn Time currently supports') + '<div class="splayerlist">' + extPlayerlst + '.</div><br>' + i18n.__('There is also support for Chromecast, AirPlay & DLNA devices.'),
         type: 'success'
       }));
+    },
+
+    refreshPlayerList: function (e) {
+      e.stopPropagation();
+      $('.play-control .playerchoicerefresh').addClass('fa-spin fa-spinner spin').tooltip('hide');
+      Promise.all(App.Device.loadDeviceSupport()).then(function(data) {
+        App.Device.rescan();
+      }).then(function() {
+        setTimeout(() => {
+          App.Device.ChooserView('#player-chooser').render();
+          $('.playerchoicerefresh, .playerchoicehelp').tooltip({html: true, delay: {'show': 800,'hide': 100}});
+          $('.play-control .playerchoice').click();
+        }, 3000);
+      });
     },
 
     showAllTorrents: function() {

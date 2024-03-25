@@ -114,7 +114,6 @@ Common.HealthButton = function (selector, retrieveHealthCallback) {
 
 			const seeds = Math.max.apply(Math, res.extra.map(function(o) { return o.seeds || 0; }));
 			const peers = Math.max.apply(Math, res.extra.map(function(o) { return o.peers || 0; }));
-			win.debug('torrent health:', res);
 
 			if (seeds === 0 && zeroSeedCheckCount < maxChecksWhenNoSeeds) {
 				zeroSeedCheckCount++;
@@ -130,7 +129,7 @@ Common.HealthButton = function (selector, retrieveHealthCallback) {
 				];
 
 				if (!isNaN(ratio)) {
-					tooltipPieces.push(` - ${i18n.__('Ratio:')} ${ratio.toFixed(2)}<br/>`);
+					tooltipPieces.push(` &nbsp;-&nbsp; ${i18n.__('Ratio:')} ${ratio.toFixed(2)}<br/>`);
 				}
 
 				if (!isNaN(seeds)) {
@@ -138,7 +137,7 @@ Common.HealthButton = function (selector, retrieveHealthCallback) {
 				}
 
 				if (!isNaN(peers)) {
-					tooltipPieces.push(` - ${i18n.__('Peers:')} ${peers}`);
+					tooltipPieces.push(` &nbsp;/&nbsp; ${i18n.__('Peers:')} ${peers}`);
 				}
 
 				getIcon()
@@ -160,32 +159,6 @@ Common.HealthButton = function (selector, retrieveHealthCallback) {
 
 Common.md5 = function (arg) {
 	return crypt.createHash('md5').update(arg).digest('hex');
-};
-
-Common.copyFile = function (source, target, cb) {
-	var cbCalled = false;
-
-	var rd = fs.createReadStream(source);
-
-	function done(err) {
-		if (!cbCalled) {
-			if (err) {
-				fs.unlink(target);
-			}
-			cb(err);
-			cbCalled = true;
-		}
-	}
-
-	rd.on('error', done);
-
-	var wr = fs.createWriteStream(target);
-	wr.on('error', done);
-	wr.on('close', function (ex) {
-		done();
-	});
-
-	rd.pipe(wr);
 };
 
 Common.fileSize = function (num) {
@@ -291,7 +264,7 @@ Common.normalize = (function () {
 	};
 })();
 
-Common.loadImage = function(img) {
+Common.loadImage = function(img, proxy = false) {
 	return new Promise(function(resolve, reject) {
 		let cache = new Image();
 		cache.onload = () => {
@@ -307,7 +280,15 @@ Common.loadImage = function(img) {
 			resolve(img);
 		};
 
-		cache.onerror = () => resolve(null);
+		cache.onerror = () => {
+			if (proxy || img.indexOf('image.tmdb.org') === -1) {
+				resolve(null);
+				return;
+			}
+			const apiUrl = App.Config.getProviderForType('tvshow')[0].apiURL;
+			const url = apiUrl[0] + 'posters/' + img.split('/').pop();
+			resolve(Common.loadImage(url, true));
+		};
 		cache.src = img;
 	});
 };

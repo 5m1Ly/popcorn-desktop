@@ -2,7 +2,6 @@
 var _ = require('underscore'),
   async = require('async'),
   inherits = require('util').inherits,
-  Q = require('q'),
   // Machine readable
   os = require('os'),
   dayjs = require('dayjs'),
@@ -35,9 +34,7 @@ var _ = require('underscore'),
   Trakt = require('trakt.tv'),
   // Torrent engines
   WebTorrent = require('webtorrent'),
-  torrentCollection = require('torrentcollection5'),
-  // VPN
-  VPNht = require('@vpnht/sdk'),
+  torrentCollection = require('torrentcollection6'),
   // NodeJS
   child = require('child_process'),
   // package.json
