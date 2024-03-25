@@ -25,7 +25,6 @@ lib-cov
 .vscode/
 *.code-workspace
 *.bat
-*.db
 *.seed
 *.log
 *.csv
