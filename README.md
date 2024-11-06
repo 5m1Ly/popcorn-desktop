@@ -53,6 +53,14 @@ Also, if you keep a [_Brewfile_](https://github.com/Homebrew/homebrew-bundle#usa
   cask "popcorn-time" #, args: { "no-quarantine": true }
   ~~~
 
+#### Apple Silicon:
+
+If you have Apple Silicon (M-series chips), you need to use the `arm64` release. Apple Silicon apps are required to be signed and notarised with an Apple developer account. So it is necessary to manually remove the quarantine flag:
+
+```
+xattr -c "/Applications/Popcorn-Time.app/"
+```
+
 
 ### Linux - Debian/Ubuntu based distros:
 Download and install:
@@ -112,7 +120,7 @@ Optionally, you may simply run `./make_popcorn.sh` if you are on a linux or mac 
 
 Full instructions & troubleshooting tips can be found in the [Contributing Guide](docs/Contributing.md#contributing-to-popcorn-time).
 
-#### Building redistribuable packages/installers:
+#### Building redistributable packages/installers:
 
 1. `yarn config set yarn-offline-mirror ./node_modules/`
 2. `yarn install --ignore-engines`
@@ -121,7 +129,7 @@ Full instructions & troubleshooting tips can be found in the [Contributing Guide
 `<platform>` can be one or more of the folowing values (separated by a comma `,`):
 * `win64`, `win32`, `linux64`, `linux32`, `osx64`, `all`
 
-Redistribuable packages are saved into `build/` subfolder.
+Redistributable packages are saved into `build/` subfolder.
 
 
 ## Getting Involved
